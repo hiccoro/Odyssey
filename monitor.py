@@ -1,19 +1,64 @@
-import os
 from playwright.sync_api import sync_playwright
 
 URL = "https://www.cinemacity.cz/films/odyssea/7268s2r#/buy-tickets-by-film?in-cinema=prague&at=2026-08-10&for-movie=7268s2r&view-mode=list"
 
 
 def main():
-    print("=== STARTE DIAGNOSE ===")
+
+    print("=== NETZWERK-DIAGNOSE ===")
 
     with sync_playwright() as p:
+
         browser = p.chromium.launch(headless=True)
 
         page = browser.new_page(
             locale="cs-CZ",
             timezone_id="Europe/Prague",
         )
+
+        def response_handler(response):
+
+            url = response.url
+
+            interesting = any(
+                word in url.lower()
+                for word in [
+                    "show",
+                    "session",
+                    "schedule",
+                    "screening",
+                    "booking",
+                    "ticket",
+                    "film",
+                    "movie",
+                    "cinema",
+                    "performance",
+                    "api"
+                ]
+            )
+
+            if interesting:
+                print("\n--- INTERESSANTE ANFRAGE ---")
+                print("URL:", url)
+                print("Status:", response.status)
+                print("Typ:", response.request.resource_type)
+
+                content_type = response.headers.get(
+                    "content-type",
+                    ""
+                )
+
+                print("Content-Type:", content_type)
+
+                if "json" in content_type.lower():
+                    try:
+                        body = response.text()
+                        print("JSON/ANTWORT:")
+                        print(body[:10000])
+                    except Exception as e:
+                        print("Konnte Antwort nicht lesen:", e)
+
+        page.on("response", response_handler)
 
         print("Öffne Cinema City...")
 
@@ -25,24 +70,10 @@ def main():
 
         print("Seite geladen.")
 
-        # Warten, damit JavaScript die Vorstellungen laden kann
-        page.wait_for_timeout(10000)
+        # Genug Zeit für alle API-Anfragen
+        page.wait_for_timeout(15000)
 
-        print("JavaScript geladen.")
-
-        print("\n=== SEITENTITEL ===")
-        print(page.title())
-
-        print("\n=== URL NACH DEM LADEN ===")
-        print(page.url)
-
-        print("\n=== SICHTBARER SEITENTEXT ===")
-
-        text = page.locator("body").inner_text()
-
-        print(text[:30000])
-
-        print("\n=== ENDE ===")
+        print("\n=== NETZWERK-DIAGNOSE BEENDET ===")
 
         browser.close()
 

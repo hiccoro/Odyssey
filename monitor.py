@@ -1,81 +1,246 @@
-from playwright.sync_api import sync_playwright
+import os
+import json
+import requests
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-URL = "https://www.cinemacity.cz/films/odyssea/7268s2r#/buy-tickets-by-film?in-cinema=prague&at=2026-08-10&for-movie=7268s2r&view-mode=list"
+BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+
+API_URL = (
+    "https://www.cinemacity.cz/cz/data-api-service/v1/"
+    "quickbook/10101/cinema-events/in-group/prague/"
+    "with-film/7268s2r/at-date/{date}?attr=&lang=cs_CZ"
+)
+
+FLORA_ID = "1052"
+DATA_FILE = "known_showings.json"
+
+PRAGUE = ZoneInfo("Europe/Prague")
+
+
+def send_telegram(message):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    response = requests.post(
+        url,
+        data={
+            "chat_id": CHAT_ID,
+            "text": message,
+            "disable_web_page_preview": True,
+        },
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+
+def load_known():
+    if not os.path.exists(DATA_FILE):
+        return set()
+
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return set(json.load(f))
+    except Exception:
+        return set()
+
+
+def save_known(showings):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(
+            sorted(showings),
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+
+
+def get_showings_for_date(date):
+    url = API_URL.format(
+        date=date.strftime("%Y-%m-%d")
+    )
+
+    response = requests.get(
+        url,
+        timeout=30,
+        headers={
+            "User-Agent": "Mozilla/5.0"
+        },
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    events = data.get("body", {}).get("events", [])
+
+    result = []
+
+    for event in events:
+
+        # Nur Cinema City Flora
+        if event.get("cinemaId") != FLORA_ID:
+            continue
+
+        # Nur Odyssea
+        if event.get("filmId") != "7268s2r":
+            continue
+
+        attributes = event.get("attributeIds", [])
+
+        # Nur 70-mm-Vorstellungen
+        if "70-mm" not in attributes:
+            continue
+
+        event_id = event.get("id")
+        event_datetime = event.get("eventDateTime")
+
+        if not event_id or not event_datetime:
+            continue
+
+        result.append({
+            "id": event_id,
+            "datetime": event_datetime,
+            "date": event.get("businessDay"),
+            "auditorium": event.get("auditorium"),
+            "auditoriumTinyName": event.get(
+                "auditoriumTinyName"
+            ),
+            "soldOut": event.get("soldOut", False),
+            "availabilityRatio": event.get(
+                "availabilityRatio"
+            ),
+            "bookingLink": event.get(
+                "bookingLink"
+            ),
+            "attributes": attributes,
+        })
+
+    return result
 
 
 def main():
 
-    print("=== NETZWERK-DIAGNOSE ===")
+    print("=== ODYSSEA FLORA MONITOR ===")
 
-    with sync_playwright() as p:
+    now = datetime.now(PRAGUE)
 
-        browser = p.chromium.launch(headless=True)
+    known = load_known()
 
-        page = browser.new_page(
-            locale="cs-CZ",
-            timezone_id="Europe/Prague",
+    current = {}
+
+    # Wir prüfen die nächsten 6 Wochen.
+    for days_ahead in range(42):
+
+        date = now.date() + timedelta(days=days_ahead)
+
+        print(
+            f"Prüfe {date}..."
         )
 
-        def response_handler(response):
+        try:
+            events = get_showings_for_date(date)
 
-            url = response.url
+        except Exception as e:
+            print(
+                f"Fehler bei {date}: {e}"
+            )
+            continue
 
-            interesting = any(
-                word in url.lower()
-                for word in [
-                    "show",
-                    "session",
-                    "schedule",
-                    "screening",
-                    "booking",
-                    "ticket",
-                    "film",
-                    "movie",
-                    "cinema",
-                    "performance",
-                    "api"
-                ]
+        for event in events:
+
+            event_id = event["id"]
+
+            current[event_id] = event
+
+            print(
+                event["datetime"],
+                "|",
+                event["auditorium"],
+                "|",
+                "sold out:",
+                event["soldOut"]
             )
 
-            if interesting:
-                print("\n--- INTERESSANTE ANFRAGE ---")
-                print("URL:", url)
-                print("Status:", response.status)
-                print("Typ:", response.request.resource_type)
+    current_ids = set(current.keys())
 
-                content_type = response.headers.get(
-                    "content-type",
-                    ""
-                )
+    # Erster Lauf:
+    # Alle momentan bekannten Vorstellungen speichern,
+    # aber noch keinen Alarm auslösen.
+    if not known:
 
-                print("Content-Type:", content_type)
-
-                if "json" in content_type.lower():
-                    try:
-                        body = response.text()
-                        print("JSON/ANTWORT:")
-                        print(body[:10000])
-                    except Exception as e:
-                        print("Konnte Antwort nicht lesen:", e)
-
-        page.on("response", response_handler)
-
-        print("Öffne Cinema City...")
-
-        page.goto(
-            URL,
-            wait_until="domcontentloaded",
-            timeout=60000
+        print(
+            f"Erster Lauf: "
+            f"{len(current_ids)} Vorstellungen gespeichert."
         )
 
-        print("Seite geladen.")
+        save_known(current_ids)
 
-        # Genug Zeit für alle API-Anfragen
-        page.wait_for_timeout(15000)
+        return
 
-        print("\n=== NETZWERK-DIAGNOSE BEENDET ===")
+    new_ids = current_ids - known
 
-        browser.close()
+    if not new_ids:
+
+        print("Keine neuen Vorstellungen.")
+
+        save_known(current_ids)
+
+        return
+
+    print(
+        f"{len(new_ids)} neue Vorstellung(en) gefunden!"
+    )
+
+    for event_id in sorted(new_ids):
+
+        event = current[event_id]
+
+        dt = datetime.fromisoformat(
+            event["datetime"]
+        )
+
+        date_text = dt.strftime(
+            "%d.%m.%Y"
+        )
+
+        time_text = dt.strftime(
+            "%H:%M"
+        )
+
+        message = (
+            "🎬 NEUE ODYSSEA-VORSTELLUNG!\n\n"
+            "📍 Cinema City Praha Flora\n"
+            "🎞️ IMAX 70 mm\n\n"
+            f"📅 {date_text}\n"
+            f"🕐 {time_text}\n"
+        )
+
+        if event["auditorium"]:
+            message += (
+                f"🏛️ {event['auditorium']}\n"
+            )
+
+        if event["soldOut"]:
+            message += "\n❌ AUSVERKAUFT"
+        else:
+            message += "\n🎟️ Tickets verfügbar"
+
+        if event["bookingLink"]:
+            message += (
+                "\n\n"
+                f"🎟️ {event['bookingLink']}"
+            )
+
+        send_telegram(message)
+
+        print(
+            f"Telegram-Nachricht gesendet: "
+            f"{event_id}"
+        )
+
+    save_known(current_ids)
 
 
 if __name__ == "__main__":

@@ -120,6 +120,53 @@ def get_showings_for_date(date):
     return result
 
 
+def save_to_git():
+    import subprocess
+
+    subprocess.run(
+        ["git", "config", "user.name", "github-actions[bot]"],
+        check=True
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "config",
+            "user.email",
+            "41898282+github-actions[bot]@users.noreply.github.com"
+        ],
+        check=True
+    )
+
+    subprocess.run(
+        ["git", "add", DATA_FILE],
+        check=True
+    )
+
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"]
+    )
+
+    # Keine Änderung → nichts committen
+    if result.returncode == 0:
+        return
+
+    subprocess.run(
+        [
+            "git",
+            "commit",
+            "-m",
+            "Update known showings"
+        ],
+        check=True
+    )
+
+    subprocess.run(
+        ["git", "push"],
+        check=True
+    )
+
+
 def main():
 
     print("=== ODYSSEA FLORA MONITOR ===")
@@ -176,6 +223,7 @@ def main():
         )
 
         save_known(current_ids)
+        save_to_git()
 
         return
 
@@ -186,6 +234,7 @@ def main():
         print("Keine neuen Vorstellungen.")
 
         save_known(current_ids)
+        save_to_git()
 
         return
 
@@ -241,6 +290,7 @@ def main():
         )
 
     save_known(current_ids)
+    save_to_git()
 
 
 if __name__ == "__main__":

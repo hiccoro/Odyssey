@@ -274,7 +274,24 @@ def main():
         if event["soldOut"]:
             message += "\n❌ AUSVERKAUFT"
         else:
-            message += "\n🎟️ Tickets verfügbar"
+            total_seats = 387
+            availability_ratio = event.get("availabilityRatio")
+            if availability_ratio is not None:
+                free_seats = round(
+                    total_seats * availability_ratio
+                )
+                
+                occupied_percent = round(
+                    (1 - availability_ratio) * 100
+                )
+                
+                message += (
+                    f"\n🎟️ Tickets verfügbar"
+                    f"\n💺 ca. {free_seats} / {total_seats} Plätze frei"
+                    f"\n📊 ca. {occupied_percent} % belegt"
+                )
+            else:
+                message += "\n🎟️ Tickets verfügbar"
 
         if event["bookingLink"]:
             message += (

@@ -19,9 +19,7 @@ jobs:
           python-version: "3.12"
 
       - name: Abhängigkeiten installieren
-        run: |
-          pip install playwright requests
-          playwright install --with-deps chromium
+        run: pip install requests
 
       - name: Monitor starten
         env:

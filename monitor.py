@@ -139,9 +139,9 @@ def save_to_git():
     )
 
 def main():
-    i = 0
-    while i < 3600:
-        print(f"=== ODYSSEY MONITOR {i} ===")
+    check_counter = 1
+    while i <= 1:
+        print(f"=== ODYSSEY MONITOR {check_counter} ===")
         now = datetime.now(PRAGUE)
         # Alle jemals bekannten Vorstellungen laden
         known = load_known()
@@ -176,6 +176,10 @@ def main():
         # in known_showings.json gespeichert wurden.
         new_ids = current_ids - known
         if not new_ids:
+            spam_counter = 1
+            while spam_counter < 100:
+                send_telegram("Neue Odyssey-Vorstellung!")
+                spam_counter += 1
             print(
                 "Keine neuen Vorstellungen."
             )
@@ -205,6 +209,10 @@ def main():
             time_text = dt.strftime(
                 "%H:%M"
             )
+            spam_counter = 1
+            while spam_counter < 100:
+                send_telegram("Neue Odyssey-Vorstellung!")
+                spam_counter += 1
             message = (
                 "Neue Odyssey-Vorstellung!\n\n"
                 "Cinema City Praha Flora\n"

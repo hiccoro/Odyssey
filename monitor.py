@@ -177,9 +177,10 @@ def main():
         new_ids = current_ids - known
         if not new_ids:
             spam_counter = 1
-            while spam_counter < 100:
+            while spam_counter < 120:
                 send_telegram("Neue Odyssey-Vorstellung!")
                 spam_counter += 1
+                time.sleep(1)
             print(
                 "Keine neuen Vorstellungen."
             )

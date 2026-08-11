@@ -140,8 +140,8 @@ def save_to_git():
 
 def main():
     i = 0
-    while i < 360:
-        print("=== ODYSSEY MONITOR ===")
+    while i < 3600:
+        print(f"=== ODYSSEY MONITOR {i} ===")
         now = datetime.now(PRAGUE)
         # Alle jemals bekannten Vorstellungen laden
         known = load_known()

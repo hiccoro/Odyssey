@@ -12,10 +12,10 @@ API_URL = (
     "quickbook/10101/cinema-events/in-group/prague/"
     "with-film/7268s2r/at-date/{date}?attr=&lang=cs_CZ"
 )
-
-FLORA_ID = "1052"
 DATA_FILE = "known_showings.json"
-
+CINEMA_ID = "1052"
+MOVIE_ID = "7268s2r"
+TOTAL_SEATS = 387
 PRAGUE = ZoneInfo("Europe/Prague")
 
 def send_telegram(message):
@@ -67,10 +67,10 @@ def get_showings_for_date(date):
     result = []
     for event in events:
         # Nur Cinema City Flora
-        if event.get("cinemaId") != FLORA_ID:
+        if event.get("cinemaId") != CINEMA_ID:
             continue
         # Nur Odyssea
-        if event.get("filmId") != "7268s2r":
+        if event.get("filmId") != MOVIE_ID:
             continue
         attributes = event.get("attributeIds", [])
         # Nur 70-mm-Vorstellungen
@@ -166,7 +166,7 @@ def main():
                 event["datetime"],
                 "|",
                 "available:",
-                event["availabilityRatio"]
+                round(TOTAL_SEATS * event["availabilityRatio"])
             )
     current_ids = set(current.keys())
     # Nur Vorstellungen melden, die noch NIE zuvor
@@ -215,19 +215,18 @@ def main():
         if event["soldOut"]:
             message += "\nAUSVERKAUFT"
         else:
-            total_seats = 387
             availability_ratio = event.get(
                 "availabilityRatio"
             )
             if availability_ratio is not None:
                 free_seats = round(
-                    total_seats * availability_ratio
+                    TOTAL_SEATS * availability_ratio
                 )
                 occupied_percent = round(
                     (1 - availability_ratio) * 100
                 )
                 message += (
-                    f"\n{free_seats} / {total_seats} Plätze frei"
+                    f"\n{free_seats} / {TOTAL_SEATS} Plätze frei"
                     f"\n{occupied_percent} % belegt"
                 )
             else:

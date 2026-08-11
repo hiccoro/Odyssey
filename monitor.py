@@ -140,7 +140,7 @@ def save_to_git():
 
 def main():
     check_counter = 1
-    while i <= 1:
+    while check_counter <= 1:
         print(f"=== ODYSSEY MONITOR {check_counter} ===")
         now = datetime.now(PRAGUE)
         # Alle jemals bekannten Vorstellungen laden
@@ -270,7 +270,7 @@ def main():
             f"{len(updated_known)} Vorstellung(en) "
             f"insgesamt dauerhaft gespeichert."
         )
-        i += 1
+        check_counter += 1
         time.sleep(10)
 if __name__ == "__main__":
     main()

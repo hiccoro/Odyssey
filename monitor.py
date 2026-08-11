@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -138,127 +139,131 @@ def save_to_git():
     )
 
 def main():
-    print("=== ODYSSEY MONITOR ===")
-    now = datetime.now(PRAGUE)
-    # Alle jemals bekannten Vorstellungen laden
-    known = load_known()
-    print(
-        f"{len(known)} bereits bekannte Vorstellung(en)."
-    )
-    current = {}
-    # Wir prüfen die nächsten 6 Wochen.
-    for days_ahead in range(42):
-        date = now.date() + timedelta(days=days_ahead)
+    i = 0
+    while i < 10:
+        print("=== ODYSSEY MONITOR ===")
+        now = datetime.now(PRAGUE)
+        # Alle jemals bekannten Vorstellungen laden
+        known = load_known()
         print(
-            f"Prüfe {date}..."
+            f"{len(known)} bereits bekannte Vorstellung(en)."
         )
-        try:
-            events = get_showings_for_date(date)
-        except Exception as e:
+        current = {}
+        # Wir prüfen die nächsten 6 Wochen.
+        for days_ahead in range(42):
+            date = now.date() + timedelta(days=days_ahead)
             print(
-                f"Fehler bei {date}: {e}"
+                f"Prüfe {date}..."
             )
-            continue
-        for event in events:
-            event_id = str(event["id"])
-            current[event_id] = event
+            try:
+                events = get_showings_for_date(date)
+            except Exception as e:
+                print(
+                    f"Fehler bei {date}: {e}"
+                )
+                continue
+            for event in events:
+                event_id = str(event["id"])
+                current[event_id] = event
+                print(
+                    event["datetime"],
+                    "|",
+                    "available:",
+                    round(TOTAL_SEATS * event["availabilityRatio"])
+                )
+        current_ids = set(current.keys())
+        # Nur Vorstellungen melden, die noch NIE zuvor
+        # in known_showings.json gespeichert wurden.
+        new_ids = current_ids - known
+        if not new_ids:
             print(
-                event["datetime"],
-                "|",
-                "available:",
-                round(TOTAL_SEATS * event["availabilityRatio"])
+                "Keine neuen Vorstellungen."
             )
-    current_ids = set(current.keys())
-    # Nur Vorstellungen melden, die noch NIE zuvor
-    # in known_showings.json gespeichert wurden.
-    new_ids = current_ids - known
-    if not new_ids:
-        print(
-            "Keine neuen Vorstellungen."
-        )
-        send_telegram("Keine neue Odyssey-Vorstellungen.")
-        # WICHTIG:
-        # Bereits bekannte IDs bleiben erhalten.
-        # Nur neue IDs werden hinzugefügt.
-        updated_known = known | current_ids
-        if updated_known != known:
-            save_known(updated_known)
-            save_to_git()
-        else:
-            print(
-                "Keine Änderung an known_showings.json."
-            )
-        return
-    print(
-        f"{len(new_ids)} neue Vorstellung(en) gefunden!"
-    )
-    for event_id in sorted(new_ids):
-        event = current[event_id]
-        dt = datetime.fromisoformat(
-            event["datetime"]
-        )
-        date_text = dt.strftime(
-            "%d.%m.%Y"
-        )
-        time_text = dt.strftime(
-            "%H:%M"
-        )
-        message = (
-            "Neue Odyssey-Vorstellung!\n\n"
-            "Cinema City Praha Flora\n"
-            "IMAX 70 mm\n\n"
-            f"{date_text} {time_text}\n"
-        )
-        if event["auditorium"]:
-            message += (
-                f"{event['auditorium']}\n"
-            )
-        if event["soldOut"]:
-            message += "\nAUSVERKAUFT"
-        else:
-            availability_ratio = event.get(
-                "availabilityRatio"
-            )
-            if availability_ratio is not None:
-                free_seats = round(
-                    TOTAL_SEATS * availability_ratio
-                )
-                occupied_percent = round(
-                    (1 - availability_ratio) * 100
-                )
-                message += (
-                    f"\n{free_seats} / {TOTAL_SEATS} Plätze frei"
-                    f"\n{occupied_percent} % belegt"
-                )
+            send_telegram("Keine neue Odyssey-Vorstellungen.")
+            # WICHTIG:
+            # Bereits bekannte IDs bleiben erhalten.
+            # Nur neue IDs werden hinzugefügt.
+            updated_known = known | current_ids
+            if updated_known != known:
+                save_known(updated_known)
+                save_to_git()
             else:
-                message += (
-                    "\nTickets verfügbar"
+                print(
+                    "Keine Änderung an known_showings.json."
                 )
-        if event["bookingLink"]:
-            message += (
-                "\n\n"
-                f"{event['bookingLink']}"
-            )
-        send_telegram(message)
+            return
         print(
-            f"Telegram-Nachricht gesendet: "
-            f"{event_id}"
+            f"{len(new_ids)} neue Vorstellung(en) gefunden!"
         )
-    # Ganz wichtig:
-    # Nicht current_ids speichern!
-    #
-    # Stattdessen:
-    # bisher bekannte IDs
-    # +
-    # neu gefundene IDs
-    #
-    # Dadurch werden alte Vorstellungen niemals gelöscht.
-    updated_known = known | current_ids
-    save_known(updated_known)
-    save_to_git()
-    print(
-        f"{len(updated_known)} Vorstellung(en) "
-        f"insgesamt dauerhaft gespeichert."
-    )
+        for event_id in sorted(new_ids):
+            event = current[event_id]
+            dt = datetime.fromisoformat(
+                event["datetime"]
+            )
+            date_text = dt.strftime(
+                "%d.%m.%Y"
+            )
+            time_text = dt.strftime(
+                "%H:%M"
+            )
+            message = (
+                "Neue Odyssey-Vorstellung!\n\n"
+                "Cinema City Praha Flora\n"
+                "IMAX 70 mm\n\n"
+                f"{date_text} {time_text}\n"
+            )
+            if event["auditorium"]:
+                message += (
+                    f"{event['auditorium']}\n"
+                )
+            if event["soldOut"]:
+                message += "\nAUSVERKAUFT"
+            else:
+                availability_ratio = event.get(
+                    "availabilityRatio"
+                )
+                if availability_ratio is not None:
+                    free_seats = round(
+                        TOTAL_SEATS * availability_ratio
+                    )
+                    occupied_percent = round(
+                        (1 - availability_ratio) * 100
+                    )
+                    message += (
+                        f"\n{free_seats} / {TOTAL_SEATS} Plätze frei"
+                        f"\n{occupied_percent} % belegt"
+                    )
+                else:
+                    message += (
+                        "\nTickets verfügbar"
+                    )
+            if event["bookingLink"]:
+                message += (
+                    "\n\n"
+                    f"{event['bookingLink']}"
+                )
+            send_telegram(message)
+            print(
+                f"Telegram-Nachricht gesendet: "
+                f"{event_id}"
+            )
+        # Ganz wichtig:
+        # Nicht current_ids speichern!
+        #
+        # Stattdessen:
+        # bisher bekannte IDs
+        # +
+        # neu gefundene IDs
+        #
+        # Dadurch werden alte Vorstellungen niemals gelöscht.
+        updated_known = known | current_ids
+        save_known(updated_known)
+        save_to_git()
+        print(
+            f"{len(updated_known)} Vorstellung(en) "
+            f"insgesamt dauerhaft gespeichert."
+        )
+        i += 1
+        time.sleep(10)
 if __name__ == "__main__":
     main()

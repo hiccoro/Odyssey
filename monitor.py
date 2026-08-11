@@ -139,10 +139,6 @@ def save_to_git():
     )
 
 def main():
-    j = 0
-    while j < 10:
-        print("=== ODYSSEY MONITOR ===")
-    j += 1
     i = 0
     while i < 10:
         print("=== ODYSSEY MONITOR ===")
@@ -195,7 +191,7 @@ def main():
                 print(
                     "Keine Änderung an known_showings.json."
                 )
-            return
+            
         print(
             f"{len(new_ids)} neue Vorstellung(en) gefunden!"
         )

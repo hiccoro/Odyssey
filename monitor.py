@@ -140,7 +140,7 @@ def save_to_git():
 
 def main():
     check_counter = 1
-    while check_counter <= 1:
+    while check_counter <= 3600:
         print(f"=== ODYSSEY MONITOR {check_counter} ===")
         now = datetime.now(PRAGUE)
         # Alle jemals bekannten Vorstellungen laden
@@ -176,11 +176,6 @@ def main():
         # in known_showings.json gespeichert wurden.
         new_ids = current_ids - known
         if not new_ids:
-            spam_counter = 1
-            while spam_counter < 30:
-                send_telegram("Neue Odyssey-Vorstellung!")
-                spam_counter += 1
-                time.sleep(1)
             print(
                 "Keine neuen Vorstellungen."
             )

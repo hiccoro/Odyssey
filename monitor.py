@@ -15,7 +15,7 @@ API_URL = (
 DATA_FILE = "known_showings.json"
 CINEMA_ID = "1052"
 MOVIE_ID = "7268s2r"
-TOTAL_SEATS = 387
+TOTAL_SEATS = 385
 PRAGUE = ZoneInfo("Europe/Prague")
 
 def send_telegram(message):
@@ -176,6 +176,7 @@ def main():
         print(
             "Keine neuen Vorstellungen."
         )
+        send_telegram("Keine neue Odyssey-Vorstellungen.")
         # WICHTIG:
         # Bereits bekannte IDs bleiben erhalten.
         # Nur neue IDs werden hinzugefügt.
@@ -203,7 +204,7 @@ def main():
             "%H:%M"
         )
         message = (
-            "NEUE ODYSSEY-VORSTELLUNG!\n\n"
+            "Neue Odyssey-Vorstellung!\n\n"
             "Cinema City Praha Flora\n"
             "IMAX 70 mm\n\n"
             f"{date_text} {time_text}\n"

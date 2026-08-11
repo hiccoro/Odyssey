@@ -140,7 +140,7 @@ def save_to_git():
 
 def main():
     i = 0
-    while i < 10:
+    while i < 360:
         print("=== ODYSSEY MONITOR ===")
         now = datetime.now(PRAGUE)
         # Alle jemals bekannten Vorstellungen laden
@@ -150,27 +150,27 @@ def main():
         )
         current = {}
         # Wir prüfen die nächsten 6 Wochen.
-        for days_ahead in range(42):
-            date = now.date() + timedelta(days=days_ahead)
-            print(
-                f"Prüfe {date}..."
-            )
-            try:
-                events = get_showings_for_date(date)
-            except Exception as e:
-                print(
-                    f"Fehler bei {date}: {e}"
-                )
-                continue
-            for event in events:
-                event_id = str(event["id"])
-                current[event_id] = event
-                print(
-                    event["datetime"],
-                    "|",
-                    "available:",
-                    round(TOTAL_SEATS * event["availabilityRatio"])
-                )
+        #for days_ahead in range(42):
+        #    date = now.date() + timedelta(days=days_ahead)
+        #    print(
+        #        f"Prüfe {date}..."
+        #    )
+        #    try:
+        #        events = get_showings_for_date(date)
+        #    except Exception as e:
+        #        print(
+        #            f"Fehler bei {date}: {e}"
+        #        )
+        #        continue
+        #    for event in events:
+        #        event_id = str(event["id"])
+        #        current[event_id] = event
+        #        print(
+        #            event["datetime"],
+        #            "|",
+        #            "available:",
+        #            round(TOTAL_SEATS * event["availabilityRatio"])
+        #        )
         current_ids = set(current.keys())
         # Nur Vorstellungen melden, die noch NIE zuvor
         # in known_showings.json gespeichert wurden.
@@ -179,7 +179,6 @@ def main():
             print(
                 "Keine neuen Vorstellungen."
             )
-            send_telegram("Keine neue Odyssey-Vorstellungen.")
             # WICHTIG:
             # Bereits bekannte IDs bleiben erhalten.
             # Nur neue IDs werden hinzugefügt.

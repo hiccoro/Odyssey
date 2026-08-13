@@ -140,7 +140,7 @@ def save_to_git():
 
 def main():
     check_counter = 1
-    while check_counter <= 10000:
+    while check_counter <= 360:
         print(f"=== ODYSSEY MONITOR {check_counter} ===")
         now = datetime.now(PRAGUE)
         # Alle jemals bekannten Vorstellungen laden

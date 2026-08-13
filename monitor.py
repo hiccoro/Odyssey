@@ -205,11 +205,11 @@ def main():
             time_text = dt.strftime(
                 "%H:%M"
             )
-            spam_counter = 1
-            while spam_counter < 120:
-                send_telegram("Neue Odyssey-Vorstellung!")
-                spam_counter += 1
-                time.sleep(1)
+            #spam_counter = 1
+            #while spam_counter < 120:
+            #    send_telegram("Neue Odyssey-Vorstellung!")
+            #    spam_counter += 1
+            #    time.sleep(1)
             message = (
                 "Neue Odyssey-Vorstellung!\n\n"
                 "Cinema City Praha Flora\n"
